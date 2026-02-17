@@ -1,5 +1,4 @@
-import os
-from .utils import ensure_dir
+from ..common.utils import ensure_dir
 from pathlib import Path
 
 STORAGE_DIR = "cafes"
@@ -29,7 +28,7 @@ def deactivate_cafe() -> None:
     
 def get_active():
     return False
-    
+            
 @ensure_dir(STORAGE_DIR)
 def delete_cafe(cafe_name: str) -> None:
     cafe_file = Path(delete_cafe.dir) / f"{cafe_name}.json"
