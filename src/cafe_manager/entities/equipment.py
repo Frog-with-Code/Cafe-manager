@@ -1,7 +1,16 @@
-from ..common.exceptions import *
-from enum import StrEnum
 import time
+from enum import StrEnum
 from rich.progress import track
+
+from cafe_manager.common.exceptions import (
+    RecipeError,
+    CoffeeMachinePipelineError,
+    CoffeeMachineStateError,
+    TableCleaningError,
+    TableOccupationError,
+    TableStateError,
+)
+from .menu import MenuItem
 
 
 class TableStates(StrEnum):
@@ -21,15 +30,15 @@ class CoffeeMachineState(StrEnum):
 class Table:
     def __init__(self, place_amount: int) -> None:
         self.place_amount = place_amount
-        self._state = TableStates.FREE
+        self._state = TableStates.AVAILABLE
 
     def clean(self) -> None:
         match (self._state):
-            case "available":
+            case TableStates.AVAILABLE:
                 print("Table is already clean")
-            case "occupied":
+            case TableStates.OCCUPIED:
                 raise TableCleaningError("Impossible to clean occupied table")
-            case "dirty":
+            case TableStates.DIRTY:
                 self._state = TableStates.AVAILABLE
                 print("Table was cleaned")
             case _:
@@ -37,36 +46,36 @@ class Table:
 
     def occupy(self) -> None:
         match (self._state):
-            case "available":
+            case TableStates.AVAILABLE:
                 self._state = TableStates.OCCUPIED
                 print("Table was occupied")
-            case "occupied":
+            case TableStates.OCCUPIED:
                 raise TableOccupationError("Table is already occupied")
-            case "dirty":
+            case TableStates.DIRTY:
                 raise TableOccupationError("Impossible to occupy dirty table")
             case _:
                 raise TableStateError("Unknown state")
 
     def free(self) -> None:
         match (self._state):
-            case "occupied":
-                self._state = "dirty"
+            case TableStates.OCCUPIED:
+                self._state = TableStates.DIRTY
                 print("Table was released")
-            case "available" | "dirty":
+            case TableStates.AVAILABLE | TableStates.DIRTY:
                 print("Table is already free")
             case _:
                 raise TableStateError("Unknown state")
 
 
 class CoffeeMachine:
-    def __init__(self, model: str, maintenanceLimit: int = 200) -> None:
+    def __init__(self, model: str, maintenance_limit: int = 200) -> None:
         self.model = model
-        self.maintenanceLimit = maintenanceLimit
-        self.cyclesAfterMaintenance: int = 0
+        self.maintenance_limit = maintenance_limit
+        self.cycles_after_maintenance: int = 0
         self._state: CoffeeMachineState = CoffeeMachineState.IDLE
 
     def _grind(self) -> None:
-        if self._state != "idle":
+        if self._state != CoffeeMachineState.IDLE:
             raise CoffeeMachinePipelineError(
                 "Impossible to start grinding process. Coffee-machine is not ready to use"
             )
@@ -76,7 +85,7 @@ class CoffeeMachine:
             time.sleep(0.5)
 
     def _brew(self) -> None:
-        if self._state != "grinding":
+        if self._state != CoffeeMachineState.GRINDING:
             raise CoffeeMachinePipelineError(
                 "Impossible to start brewing process. Coffee beans were not grinded"
             )
@@ -86,7 +95,7 @@ class CoffeeMachine:
             time.sleep(0.5)
 
     def _steam(self) -> None:
-        if self._state != "brewing":
+        if self._state != CoffeeMachineState.BREWING:
             raise CoffeeMachinePipelineError(
                 "Impossible to start steaming process. Coffee was not brewed"
             )
@@ -97,26 +106,32 @@ class CoffeeMachine:
 
     def maintenance(self) -> None:
         match (self._state):
-            case "idle":
+            case CoffeeMachineState.IDLE:
                 print("Maintenance is not needed yet")
-            case "maintenance":
+            case CoffeeMachineState.MAINTENANCE:
                 self._state = CoffeeMachineState.IDLE
-                self.cyclesAfterMaintenance = 0
-            case "grinding" | "brewing" | "steaming":
+                self.cycles_after_maintenance = 0
+            case (
+                CoffeeMachineState.GRINDING
+                | CoffeeMachineState.BREWING
+                | CoffeeMachineState.STEAMING
+            ):
                 raise CoffeeMachineStateError(
                     "Impossible to carry out maintenance during working process"
                 )
             case _:
                 raise CoffeeMachineStateError("UnknownState")
 
-    def make_coffee(self, coffee: Coffee) -> Coffee:
-        if self._state != "idle":
+    def make_coffee(self, coffee: MenuItem) -> MenuItem:
+        if self._state != CoffeeMachineState.IDLE:
             raise CoffeeMachineStateError("Coffee-machine is not ready to use")
+        if not coffee.requires_coffee_machine:
+            raise RecipeError("No coffee-machine needed")
         self._grind()
         self._brew()
-        if coffee.with_milk_foam:
+        if coffee.requires_milk_foam:
             self._steam()
 
         self._state = CoffeeMachineState.IDLE
-        self.cyclesAfterMaintenance += 1
+        self.cycles_after_maintenance += 1
         print("Coffee is made!")
