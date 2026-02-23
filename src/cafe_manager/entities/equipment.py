@@ -1,6 +1,7 @@
 import time
 from enum import StrEnum
 from rich.progress import track
+from uuid import uuid4
 
 from cafe_manager.common.exceptions import (
     RecipeError,
@@ -10,6 +11,7 @@ from cafe_manager.common.exceptions import (
     TableOccupationError,
     TableStateError,
 )
+from cafe_manager.entities import people
 from .menu import MenuItem
 
 
@@ -31,6 +33,7 @@ class Table:
     def __init__(self, place_amount: int) -> None:
         self.place_amount = place_amount
         self._state = TableStates.AVAILABLE
+        self.table_id = uuid4()
 
     def clean(self) -> None:
         match (self._state):
@@ -43,18 +46,17 @@ class Table:
                 print("Table was cleaned")
             case _:
                 raise TableStateError("Unknown state")
+            
+    def can_be_occupied(self, people_amount: int) -> bool:
+        if self._state != TableStates.AVAILABLE:
+            return False
+        if self.place_amount < people_amount:
+            return False
+        return True
 
-    def occupy(self) -> None:
-        match (self._state):
-            case TableStates.AVAILABLE:
-                self._state = TableStates.OCCUPIED
-                print("Table was occupied")
-            case TableStates.OCCUPIED:
-                raise TableOccupationError("Table is already occupied")
-            case TableStates.DIRTY:
-                raise TableOccupationError("Impossible to occupy dirty table")
-            case _:
-                raise TableStateError("Unknown state")
+    def occupy(self, people_amount: int) -> None:
+        if not self.can_be_occupied(people_amount):
+            raise TableOccupationError("Impossible to occupy table. It's not available or don't match the conditions")
 
     def free(self) -> None:
         match (self._state):
@@ -122,7 +124,7 @@ class CoffeeMachine:
             case _:
                 raise CoffeeMachineStateError("UnknownState")
 
-    def make_coffee(self, coffee: MenuItem) -> MenuItem:
+    def make_coffee(self, coffee: MenuItem) -> None:
         if self._state != CoffeeMachineState.IDLE:
             raise CoffeeMachineStateError("Coffee-machine is not ready to use")
         if not coffee.requires_coffee_machine:
