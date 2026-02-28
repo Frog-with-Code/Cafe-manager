@@ -4,8 +4,16 @@ from datetime import datetime
 from uuid import UUID, uuid4
 from dataclasses import FrozenInstanceError
 
-from cafe_manager.domain.entities.finance import Money, Transaction, TransactionType
-from cafe_manager.common.exceptions import IncorrectMoneyAmountError
+from cafe_manager.domain.entities.finance import (
+    Money,
+    Transaction,
+    TransactionType,
+    Account,
+)
+from cafe_manager.common.exceptions import (
+    IncorrectMoneyAmountError,
+    InsufficientBudgetError,
+)
 
 
 class TestMoney:
@@ -112,3 +120,29 @@ class TestTransaction:
         assert tx1.transaction_id != tx2.transaction_id
 
         assert tx1.time is not tx2.time
+
+
+class TestAccount:
+    @pytest.fixture
+    def finance_manager(self):
+        return Account(Money.from_any(1000))
+
+    def test_initial_balance(self, finance_manager):
+        assert finance_manager.balance == Money.from_any(1000)
+
+    def test_add_income(self, finance_manager):
+        finance_manager.add_income(Money.from_any(500))
+        assert finance_manager.balance == Money.from_any(1500)
+
+    def test_add_expense_success(self, finance_manager):
+        finance_manager.add_expense(Money.from_any(500))
+        assert finance_manager.balance == Money.from_any(500)
+
+    def test_add_expense_insufficient(self, finance_manager):
+        with pytest.raises(InsufficientBudgetError):
+            finance_manager.add_expense(Money.from_any(1500))
+
+    def test_transaction_chain(self, finance_manager):
+        finance_manager.add_expense(Money.from_any(500))
+        finance_manager.add_income(Money.from_any(500))
+        assert len(finance_manager.history) == 2

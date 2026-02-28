@@ -1,12 +1,15 @@
 from __future__ import annotations
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from decimal import Decimal, ROUND_HALF_UP
 from datetime import datetime
 from enum import StrEnum
 from datetime import datetime
 from uuid import uuid4, UUID
 
-from cafe_manager.common.exceptions import IncorrectMoneyAmountError
+from cafe_manager.common.exceptions import (
+    IncorrectMoneyAmountError,
+    InsufficientBudgetError,
+)
 from cafe_manager.common.utils import validate_non_negative
 
 
@@ -106,3 +109,45 @@ class Transaction:
     description: str = ""
     transaction_id: UUID = field(default_factory=uuid4)
     time: datetime = field(default_factory=datetime.now)
+
+
+class Account:
+    def __init__(self, balance: Money = Money()) -> None:
+        self._balance = balance
+        self._transactions: list[Transaction] = []
+
+    @property
+    def balance(self) -> Money:
+        return self._balance
+
+    @property
+    def history(self) -> list[Transaction]:
+        return self._transactions[:]
+
+    def _can_expense(self, money: Money) -> bool:
+        return self._balance.amount >= money.amount
+
+    def add_expense(self, money: Money, description: str = "") -> None:
+        if not self._can_expense(money):
+            raise InsufficientBudgetError(
+                "There is not enough money in the budget to expense"
+            )
+
+        self._balance = self.balance - money
+
+        t = Transaction(
+            transaction_type=TransactionType.EXPENSE,
+            amount=money,
+            description=description,
+        )
+        self._transactions.append(t)
+
+    def add_income(self, money: Money, description: str = "") -> None:
+        self._balance = self.balance + money
+
+        t = Transaction(
+            transaction_type=TransactionType.INCOME,
+            amount=money,
+            description=description,
+        )
+        self._transactions.append(t)
