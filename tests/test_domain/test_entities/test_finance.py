@@ -70,11 +70,11 @@ class TestMoney:
 
 class TestTransaction:
     def test_create_with_required_fields_only(self):
-        amount = Money(Decimal("100.50"))
-        tx = Transaction(transaction_type=TransactionType.INCOME, amount=amount)
+        money = Money(Decimal("100.50"))
+        tx = Transaction(transaction_type=TransactionType.INCOME, money=money)
 
         assert tx.transaction_type == TransactionType.INCOME
-        assert tx.amount == amount
+        assert tx.money == money
         assert tx.description == ""
         assert isinstance(tx.transaction_id, UUID)
         assert isinstance(tx.time, datetime)
@@ -82,39 +82,39 @@ class TestTransaction:
     def test_create_with_all_explicit_fields(self):
         custom_uuid = uuid4()
         custom_time = datetime(2023, 10, 25, 12, 0, 0)
-        amount = Money(Decimal("50.00"))
+        money = Money(Decimal("50.00"))
 
         tx = Transaction(
             transaction_type=TransactionType.EXPENSE,
-            amount=amount,
-            description="Покупка кофе",
+            money=money,
+            description="Coffee buying",
             transaction_id=custom_uuid,
             time=custom_time,
         )
 
         assert tx.transaction_type == TransactionType.EXPENSE
-        assert tx.amount == amount
-        assert tx.description == "Покупка кофе"
+        assert tx.money == money
+        assert tx.description == "Coffee buying"
         assert tx.transaction_id == custom_uuid
         assert tx.time == custom_time
 
     def test_transaction_is_frozen(self):
         tx = Transaction(
-            transaction_type=TransactionType.INCOME, amount=Money(Decimal("100"))
+            transaction_type=TransactionType.INCOME, money=Money(Decimal("100"))
         )
 
         with pytest.raises(FrozenInstanceError):
             tx.description = "Попытка изменить описание"  # type: ignore
 
         with pytest.raises(FrozenInstanceError):
-            tx.amount = Money(Decimal("200"))  # type: ignore
+            tx.money = Money(Decimal("200"))  # type: ignore
 
     def test_dynamic_default_factories(self):
         tx1 = Transaction(
-            transaction_type=TransactionType.INCOME, amount=Money(Decimal("10"))
+            transaction_type=TransactionType.INCOME, money=Money(Decimal("10"))
         )
         tx2 = Transaction(
-            transaction_type=TransactionType.EXPENSE, amount=Money(Decimal("20"))
+            transaction_type=TransactionType.EXPENSE, money=Money(Decimal("20"))
         )
 
         assert tx1.transaction_id != tx2.transaction_id
@@ -125,7 +125,7 @@ class TestTransaction:
 class TestAccount:
     @pytest.fixture
     def finance_manager(self):
-        return Account(Money.from_any(1000))
+        return Account(uuid4(), Money.from_any(1000))
 
     def test_initial_balance(self, finance_manager):
         assert finance_manager.balance == Money.from_any(1000)

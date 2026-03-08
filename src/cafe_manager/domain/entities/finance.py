@@ -105,16 +105,17 @@ class TransactionType(StrEnum):
 @dataclass(frozen=True)
 class Transaction:
     transaction_type: TransactionType
-    amount: Money
+    money: Money
     description: str = ""
     transaction_id: UUID = field(default_factory=uuid4)
     time: datetime = field(default_factory=datetime.now)
 
 
 class Account:
-    def __init__(self, balance: Money = Money()) -> None:
+    def __init__(self, account_id: UUID | None = None, balance: Money = Money(), history: list[Transaction] | None = None) -> None:
+        self.account_id = account_id
         self._balance = balance
-        self._transactions: list[Transaction] = []
+        self._history = history or []
 
     @property
     def balance(self) -> Money:
@@ -122,7 +123,7 @@ class Account:
 
     @property
     def history(self) -> list[Transaction]:
-        return self._transactions[:]
+        return self._history[:]
 
     def _can_expense(self, money: Money) -> bool:
         return self._balance.amount >= money.amount
@@ -137,17 +138,17 @@ class Account:
 
         t = Transaction(
             transaction_type=TransactionType.EXPENSE,
-            amount=money,
+            money=money,
             description=description,
         )
-        self._transactions.append(t)
+        self._history.append(t)
 
     def add_income(self, money: Money, description: str = "") -> None:
         self._balance = self.balance + money
 
         t = Transaction(
             transaction_type=TransactionType.INCOME,
-            amount=money,
+            money=money,
             description=description,
         )
-        self._transactions.append(t)
+        self._history.append(t)

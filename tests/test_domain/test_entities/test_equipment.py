@@ -23,55 +23,55 @@ from cafe_manager.common.exceptions import (
 class TestTable:
     @pytest.fixture
     def table(self) -> Table:
-        return Table(max_places=4)
+        return Table(table_id=11, max_places=4)
 
     @pytest.fixture
     def table_with_chairs(self, table: Table) -> Table:
-        table.add_chair(uuid4())
-        table.add_chair(uuid4())
+        table.add_chair(111)
+        table.add_chair(222)
         return table
 
     def test_initialization(self, table: Table):
         assert table.max_places == 4
-        assert table.is_free is True
-        assert isinstance(table.table_id, UUID)
+        assert table.is_available is True
+        assert isinstance(table.table_id, int)
         assert table.chairs_amount == 0
-        assert table.chairs_id == set()
+        assert table.chairs_ids == set()
 
     def test_chairs_id_encapsulation(self, table: Table):
-        table.add_chair(uuid4())
-        chairs_copy = table.chairs_id
+        table.add_chair(3)
+        chairs_copy = table.chairs_ids
 
-        chairs_copy.add(uuid4())
+        chairs_copy.add(4)
 
         assert table.chairs_amount == 1
         assert len(chairs_copy) == 2
 
     def test_add_chair_success(self, table: Table):
-        chair_id = uuid4()
+        chair_id = 3
         table.add_chair(chair_id)
 
         assert table.chairs_amount == 1
-        assert chair_id in table.chairs_id
+        assert chair_id in table.chairs_ids
 
     def test_add_chair_exceeds_max_places(self, table: Table):
-        for _ in range(4):
-            table.add_chair(uuid4())
+        for i in range(4):
+            table.add_chair(i)
 
         with pytest.raises(
             TablePlacesError, match="Max places amount was already achieved"
         ):
-            table.add_chair(uuid4())
+            table.add_chair(4)
 
     def test_remove_chair_success(self, table: Table):
-        chair_id = uuid4()
+        chair_id = 3
         table.add_chair(chair_id)
         table.remove_chair(chair_id)
 
         assert table.chairs_amount == 0
 
     def test_remove_nonexistent_chair(self, table: Table):
-        fake_chair_id = uuid4()
+        fake_chair_id = 3
         with pytest.raises(
             TablePlacesError, match=f"not assigned to table {table.table_id}"
         ):
@@ -136,19 +136,19 @@ class TestTable:
 class TestChair:
     @pytest.fixture
     def chair(self) -> Chair:
-        return Chair()
+        return Chair(chair_id=1)
 
     def test_initialization(self, chair: Chair):
-        assert isinstance(chair.chair_id, UUID)
-        assert chair.table_id is None
+        assert isinstance(chair.chair_id, int)
+        assert chair._table_id is None
         assert chair._state == ChairState.AVAILABLE
         assert chair.can_be_occupied() is True
 
     def test_assign_to_table(self, chair: Chair):
-        table_id = uuid4()
+        table_id = 2
         chair.assign_to_table(table_id)
 
-        assert chair.table_id == table_id
+        assert chair._table_id == table_id
 
     def test_can_be_occupied(self, chair: Chair):
         assert chair.can_be_occupied() is True

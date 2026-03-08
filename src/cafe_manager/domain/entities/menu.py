@@ -1,14 +1,13 @@
 from dataclasses import dataclass, field
 from enum import StrEnum
-from uuid import uuid4
 
 from .finance import Money
 from cafe_manager.common.exceptions import MenuItemTypeError
 
 
 class Unit(StrEnum):
-    LITER = "l"
-    KILOGRAM = "kg"
+    LITER = "ml"
+    KILOGRAM = "g"
 
 
 class MenuItemType(StrEnum):
@@ -76,10 +75,10 @@ class MenuItem:
 
 
 class Menu:
-    def __init__(self, menu_items: set[MenuItem] | None = None):
+    def __init__(self, menu_items: set[MenuItem] | None = None, menu_id: int | None = None):
         self._drinks = set()
         self._food = set()
-        self.menu_id = uuid4()
+        self.menu_id = menu_id
         if menu_items:
             for item in menu_items:
                 self.add(item)

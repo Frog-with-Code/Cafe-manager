@@ -1,5 +1,7 @@
+from datetime import date, datetime
 from enum import StrEnum
 from uuid import UUID, uuid4
+
 
 from .menu import MenuItem
 from .finance import Money
@@ -21,18 +23,25 @@ class OrderState(StrEnum):
 class Order:
     def __init__(
         self,
-        client_id: UUID,
-        table_id: UUID | None = None,
-        items: dict[MenuItem, int] | None = None,
+        order_id: str,
+        items: dict[MenuItem, int],
+        client_id: str | None = None,
+        table_id: int | None = None,
+        created_at: datetime | None = None, 
+        paid_at: datetime | None = None,
+        total_price: Money | None = None,
+        state: OrderState | None = OrderState.AWAITING_PAYMENT
     ) -> None:
         self.client_id = client_id
+        self.order_id = order_id
+        
         self.table_id = table_id
-        self.order_id = uuid4()
         self.employee_id = None
-        self._items = items if items else {}
-
-        self.total_price: Money = self._calculate_price(items)
-        self._state = OrderState.AWAITING_PAYMENT
+        self._items = items
+        self.created_at = created_at or datetime.now()
+        self.paid_at = paid_at
+        self.total_price = total_price or self._calculate_price(items)
+        self._state = state
 
     def _calculate_price(self, items: dict[MenuItem, int] | None) -> Money:
         price = Money()
@@ -40,6 +49,14 @@ class Order:
             for item, amount in items.items():
                 price += item.price * amount
         return price
+    
+    @property
+    def items_amount(self) -> int:
+        return len(self._items)
+    
+    @property
+    def items(self) -> dict[MenuItem, int]:
+        return dict(self._items)
 
     def add_item(self, item: MenuItem, amount: int) -> None:
         if self._state != OrderState.AWAITING_PAYMENT:
@@ -78,14 +95,16 @@ class Order:
             raise OrderPaymentError("Impossible to pay order due to inner properties")
 
         self._state = OrderState.PAID
+        self.paid_at = datetime.now()
         print("Order is paid")
 
-    def start_cooking(self) -> None:
+    def start_cooking(self, employee_id: UUID) -> None:
         match (self._state):
             case OrderState.AWAITING_PAYMENT:
                 raise OrderStateError("Order is not paid")
             case OrderState.PAID:
                 self._state = OrderState.IN_PROGRESS
+                self.employee_id = employee_id
                 print("Order is cooking")
             case _:
                 raise OrderStateError("Order is already cooked or cancelled")

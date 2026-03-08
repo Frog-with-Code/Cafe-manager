@@ -1,9 +1,7 @@
 import time
 from enum import StrEnum
 from rich.progress import track
-from uuid import uuid4, UUID
 
-from cafe_manager.common.utils import validate_non_negative
 from cafe_manager.common.exceptions import (
     RecipeError,
     CoffeeMachinePipelineError,
@@ -37,14 +35,15 @@ class ChairState(StrEnum):
 
 
 class Chair:
-    def __init__(self) -> None:
-        self._state: ChairState = ChairState.AVAILABLE
-        self._table_id: UUID | None = None
-        self.chair_id: UUID = uuid4()
-
-    @property
-    def table_id(self) -> UUID | None:
-        return self._table_id
+    def __init__(
+        self,
+        chair_id: int | None = None,
+        table_id: int | None = None,
+        state: ChairState = ChairState.AVAILABLE,
+    ) -> None:
+        self.chair_id = chair_id
+        self._table_id = table_id
+        self._state = state
 
     def can_be_occupied(self) -> bool:
         return self._state == ChairState.AVAILABLE
@@ -63,17 +62,25 @@ class Chair:
             self._state = ChairState.AVAILABLE
             print("Chair was released")
 
-    def assign_to_table(self, table_id: UUID) -> None:
+    def assign_to_table(self, table_id: int | None) -> None:
+        if not isinstance(table_id, int):
+            raise ValueError("Incorrect id type")
         self._table_id = table_id
         print(f"Chair {self.chair_id} was assigned to table {table_id}")
 
 
 class Table:
-    def __init__(self, max_places: int) -> None:
-        self.max_places: int = max_places
-        self._state: TableState = TableState.AVAILABLE
-        self.table_id: UUID = uuid4()
-        self._chairs_id: set[UUID] = set()
+    def __init__(
+        self,
+        max_places: int,
+        state: TableState | None = None,
+        table_id: int | None = None,
+        chairs_ids: set[int] | None = None,
+    ) -> None:
+        self.table_id = table_id
+        self.max_places = max_places
+        self._state = state or TableState.AVAILABLE
+        self._chairs_ids = chairs_ids or set()
 
     def clean(self) -> None:
         match (self._state):
@@ -88,19 +95,19 @@ class Table:
                 raise TableStateError("Unknown state")
 
     @property
-    def is_free(self) -> bool:
+    def is_available(self) -> bool:
         return self._state == TableState.AVAILABLE
 
     @property
-    def chairs_id(self) -> set[UUID]:
-        return self._chairs_id.copy()
+    def chairs_ids(self) -> set[int]:
+        return self._chairs_ids.copy()
 
     @property
     def chairs_amount(self) -> int:
-        return len(self._chairs_id)
+        return len(self._chairs_ids)
 
     def can_be_occupied(self, people_amount: int) -> bool:
-        return self.is_free and len(self._chairs_id) >= people_amount
+        return self.is_available and len(self._chairs_ids) >= people_amount
 
     def occupy(self, people_amount: int) -> None:
         if not self.can_be_occupied(people_amount):
@@ -119,15 +126,19 @@ class Table:
             case _:
                 raise TableStateError("Unknown state")
 
-    def add_chair(self, chair_id: UUID) -> None:
+    def add_chair(self, chair_id: int | None) -> None:
+        if not isinstance(chair_id, int):
+            raise ValueError("Incorrect id type")
         if self.chairs_amount >= self.max_places:
             raise TablePlacesError("Max places amount was already achieved")
 
-        self._chairs_id.add(chair_id)
+        self._chairs_ids.add(chair_id)
 
-    def remove_chair(self, chair_id: UUID) -> None:
+    def remove_chair(self, chair_id: int | None) -> None:
+        if not isinstance(chair_id, int):
+            raise ValueError("Incorrect id type")
         try:
-            self._chairs_id.remove(chair_id)
+            self._chairs_ids.remove(chair_id)
         except KeyError:
             raise TablePlacesError(
                 f"Chair with id {chair_id} not assigned to table {self.table_id}"
