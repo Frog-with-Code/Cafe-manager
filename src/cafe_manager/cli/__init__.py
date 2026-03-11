@@ -6,6 +6,7 @@ from .machine_commands import app as machine_app
 from .menu_commands import app as menu_app
 from .order_commands import app as order_app
 from .table_commands import app as table_app
+from .cafe_commands import app as cafe_app
 
 
 __all__ = [
@@ -17,4 +18,5 @@ __all__ = [
     "menu_app",
     "order_app",
     "table_app",
+    "cafe_app"
 ]

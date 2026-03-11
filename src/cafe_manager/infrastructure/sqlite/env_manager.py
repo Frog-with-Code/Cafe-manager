@@ -16,7 +16,7 @@ class EnvironmentManager:
         try:
             active_path.write_text(db_path.as_posix(), encoding="utf-8")
         except OSError as e:
-            raise RuntimeError(f"Failed to write environment marker: {e}")
+            raise OSError(f"Failed to write environment marker") from e
 
     def get_active_env_path(self, data_folder_path: Path) -> Path | None:
         active_path = data_folder_path / self.active_env_filename
