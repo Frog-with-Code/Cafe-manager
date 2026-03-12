@@ -28,18 +28,22 @@ class EnvironmentManager:
 
     def create_env(self, db_path: Path) -> None:
         if db_path.exists():
-            raise FileExistsError(f"File with path {db_path} already exists")
+            raise FileExistsError(f"File with path '{db_path}' already exists")
 
         db_path.parent.mkdir(parents=True, exist_ok=True)
+        db_path.touch()
 
     def remove_env(self, db_path: Path) -> None:
         if not db_path.exists():
-            raise FileNotFoundError(f"Impossible to remove unexistent file {db_path}")
+            raise FileNotFoundError(f"Impossible to remove unexistent file: {db_path}")
 
         db_path.unlink()
 
     def deactivate_env(self, data_folder_path: Path) -> None:
         active_path = data_folder_path / self.active_env_filename
 
-        if active_path:
-            active_path.unlink()
+        if not active_path.exists():
+            raise FileNotFoundError(
+                f"Impossible to remove unexistent file: {active_path}"
+            )
+        active_path.unlink()
